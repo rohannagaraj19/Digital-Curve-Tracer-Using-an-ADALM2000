@@ -192,9 +192,9 @@ class Diode:
 
     def GraphNew(self, name):
         if name[0] == 'R' and name[3] == 'A':
-            leName = 'R0xA'
+            leName = 'R0xA new'
         elif name[0] == 'R' and name[3] == 'B':
-            leName = 'R0xB'
+            leName = 'R0xB new'
         else:
             return None
         reader = pd.read_csv(f'diode_data/{leName} master.csv') #dataframe
@@ -262,15 +262,15 @@ class Diode:
             print(f"This diode is too worn out and not advised for operation")
 
 diodeName = str(input("Name of Diode Being tested?: "))
-ohmlanda = Diode(diodeName)
-if 'master' in diodeName: #to add new data on a diode
+diode = Diode(diodeName)
+if 'new' in diodeName: #to add new data on a diode
     print("You are now entering the data for a new diode...")
-    ohmlanda.CurveTrace()
-    ohmlanda.save_graphs()
+    diode.CurveTrace()
+    diode.save_graphs()
     exit(1)
 
-ohmlanda.GraphNew(diodeName)
-ohmlanda.CurveTrace()
-ohmlanda.standardDev()
-ohmlanda.save_graphs()
+diode.GraphNew(diodeName)
+diode.CurveTrace()
+diode.standardDev()
+diode.save_graphs()
 
