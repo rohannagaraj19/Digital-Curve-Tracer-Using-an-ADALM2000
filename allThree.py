@@ -25,7 +25,7 @@ class Diode:
         self.name = name
         self.newFit = [] #stores the equation for the 'Average Voltage across new Diode'
         self.avgFit = [] #stores the equation for the 'Average Voltage across tested Diode'
-        self.currMax = 10 #max current it plots
+        self.currMax = 100 #max current it plots
         self.currSample = 1000 #precision of plot (currSample amount of evenly spaced points)
 
     def save_graphs(self):
@@ -192,12 +192,12 @@ class Diode:
 
     def GraphNew(self, name):
         if name[0] == 'R' and name[3] == 'A':
-            leName = 'R0xA new'
+            leName = 'R0xA'
         elif name[0] == 'R' and name[3] == 'B':
-            leName = 'R0xB new'
+            leName = 'R0xB'
         else:
             return None
-        reader = pd.read_csv(f'diode_data/{leName} master.csv') #dataframe
+        reader = pd.read_csv(f'diode_data/{leName} new.csv') #dataframe
         yAxis = reader['Average Current Through Diode (A)'].copy().dropna()
         xAxis = reader['Average Diode Voltage (V)'].copy().dropna()
         self.newV = xAxis #set variables to class
@@ -236,14 +236,14 @@ class Diode:
         
         deviations = []
         for i in range(3): #self.avgFit
-            if i ==1:
+            if i ==0:
                 differences = np.vstack((self.avgFit, voltage_fit_abN))
                 deviations.append(np.std(differences))
-            elif i==2:
+            elif i==1:
                 differences = np.vstack((self.avgFit, self.newFit))
                 deviations.append(np.std(differences))
-            elif i==3:
-                differences = np.vstack((self.avgFit - voltage_fit_bN))
+            elif i==2:
+                differences = np.vstack((self.avgFit, voltage_fit_bN))
                 deviations.append(np.std(differences))   
         # for i in range(3): #voltage_fit_bd
         #     if i ==1:
@@ -255,7 +255,7 @@ class Diode:
         #     elif i==3:
         #         differences = voltage_fit_bd - voltage_fit_bN
         #         deviations.append(100* np.std(differences))   
-        print(f"This diode's deviation from the a new one is {min(deviations)}")
+        print(f"This diode's deviation from the a new one is {(deviations)}")
         if(min(deviations) < 0.05): #if this deviation is less than 5% thats good enough 
             print(f"This diode is still operational")
         else:
