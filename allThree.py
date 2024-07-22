@@ -26,7 +26,7 @@ class Diode:
         self.newFit = [] #stores the equation for the 'Average Voltage across new Diode'
         self.avgFit = [] #stores the equation for the 'Average Voltage across tested Diode'
         self.currMax = 10 #max current it plots
-        self.currSample = 1000 #precision of plot
+        self.currSample = 1000 #precision of plot (currSample amount of evenly spaced points)
 
     def save_graphs(self):
         name_ = self.name
@@ -216,10 +216,7 @@ class Diode:
         tolerance = 0.05 #5 percent tolerance
         above = 1/(1+tolerance)
         below = 1/(1-tolerance)
-        # above_tolerance_diodeV = list(above*x for x in diodeV)
-        # below_tolerance_diodeV = list(below *x for x in diodeV)
-        # above_tolerance_current = list(above * x for x in current)
-        # below_tolerance_current = list(below *x for x in current)
+
         
         above_tolerance_newV = list(above * x for x in newV)
         above_tolerance_newA = list(above * x for x in newA)
@@ -229,30 +226,15 @@ class Diode:
         current_fit= np.linspace(0.001, self.currMax, self.currSample)
         param_abN, _ = curve_fit(Exp, xdata = above_tolerance_newV, ydata= above_tolerance_newA, p0 = (0,1,0.1))
         param_bN, _ = curve_fit(Exp, xdata = below_tolerance_newV, ydata = below_tolerance_newA, p0 = (0,1,0.1))
-        #param_abD, _ = curve_fit(Exp, xdata = above_tolerance_diodeV, ydata= above_tolerance_current, p0 = (0,1,0.1))
-        #param_bD, _ = curve_fit(Exp, xdata = below_tolerance_diodeV, ydata = below_tolerance_current, p0 = (0,1,0.1))
-        
-        #voltage_fit_abd = (np.log((current_fit - param_abD[2]) / param_abD[0]) / param_abD[1]) #check if right indices
-        #voltage_fit_bd = (np.log((current_fit - param_bD[2]) / param_bD[0]) / param_bD[1])
+
         voltage_fit_abN = (np.log((current_fit - param_abN[2]) / param_abN[0]) / param_abN[1]) #check if right indices
         voltage_fit_bN = (np.log((current_fit - param_bN[2]) / param_bN[0]) / param_bN[1])
 
-        #self.bx.plot(voltage_fit_abd, current_fit, color = 'orange', linestyle = '--') #graph the tolerances
-        #self.bx.plot(voltage_fit_bd, current_fit, color = 'orange', linestyle = '--')
+
         self.bx.plot(voltage_fit_abN, current_fit, color = 'cyan', linestyle = ':') #graph the tolerances
         self.bx.plot(voltage_fit_bN, current_fit, color = 'cyan', linestyle = ':')
         
         deviations = []
-        # for i in range(3): #voltage_fit_abd
-        #     if i ==1:
-        #         differences = voltage_fit_abd - voltage_fit_abN
-        #         deviations.append(100* np.std(differences))
-        #     elif i==2:
-        #         differences = voltage_fit_abd - self.newFit
-        #         deviations.append(100* np.std(differences))
-        #     elif i==3:
-        #         differences = voltage_fit_abd - voltage_fit_bN
-        #         deviations.append(100* np.std(differences))
         for i in range(3): #self.avgFit
             if i ==1:
                 differences = np.vstack((self.avgFit, voltage_fit_abN))
