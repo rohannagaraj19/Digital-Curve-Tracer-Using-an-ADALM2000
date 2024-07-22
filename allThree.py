@@ -189,7 +189,13 @@ class Diode:
 
 
     def GraphNew(self, name):
-        reader = pd.read_csv(f'diode_data/{name} master.csv') #dataframe
+        if name[0] == 'R' and name[3] == 'A':
+            leName = 'R0xA'
+        elif name[0] == 'R' and name[3] == 'B':
+            leName = 'R0xB'
+        else:
+            return None
+        reader = pd.read_csv(f'diode_data/{leName} master.csv') #dataframe
         yAxis = reader['Average Current Through Diode (A)'].copy().dropna()
         xAxis = reader['Average Diode Voltage (V)'].copy().dropna()
         self.newV = xAxis #set variables to class
@@ -208,10 +214,10 @@ class Diode:
         tolerance = 0.05 #5 percent tolerance
         above = 1/(1+tolerance)
         below = 1/(1-tolerance)
-        above_tolerance_diodeV = list(above*x for x in diodeV)
-        below_tolerance_diodeV = list(below *x for x in diodeV)
-        above_tolerance_current = list(above * x for x in current)
-        below_tolerance_current = list(below *x for x in current)
+        # above_tolerance_diodeV = list(above*x for x in diodeV)
+        # below_tolerance_diodeV = list(below *x for x in diodeV)
+        # above_tolerance_current = list(above * x for x in current)
+        # below_tolerance_current = list(below *x for x in current)
         
         above_tolerance_newV = list(above * x for x in newV)
         above_tolerance_newA = list(above * x for x in newA)
@@ -221,30 +227,30 @@ class Diode:
         current_fit= np.linspace(0.001, 0.05, 100)
         param_abN, _ = curve_fit(Exp, xdata = above_tolerance_newV, ydata= above_tolerance_newA, p0 = (0,1,0.1))
         param_bN, _ = curve_fit(Exp, xdata = below_tolerance_newV, ydata = below_tolerance_newA, p0 = (0,1,0.1))
-        param_abD, _ = curve_fit(Exp, xdata = above_tolerance_diodeV, ydata= above_tolerance_current, p0 = (0,1,0.1))
-        param_bD, _ = curve_fit(Exp, xdata = below_tolerance_diodeV, ydata = below_tolerance_current, p0 = (0,1,0.1))
+        #param_abD, _ = curve_fit(Exp, xdata = above_tolerance_diodeV, ydata= above_tolerance_current, p0 = (0,1,0.1))
+        #param_bD, _ = curve_fit(Exp, xdata = below_tolerance_diodeV, ydata = below_tolerance_current, p0 = (0,1,0.1))
         
-        voltage_fit_abd = (np.log((current_fit - param_abD[2]) / param_abD[0]) / param_abD[1]) #check if right indices
-        voltage_fit_bd = (np.log((current_fit - param_bD[2]) / param_bD[0]) / param_bD[1])
+        #voltage_fit_abd = (np.log((current_fit - param_abD[2]) / param_abD[0]) / param_abD[1]) #check if right indices
+        #voltage_fit_bd = (np.log((current_fit - param_bD[2]) / param_bD[0]) / param_bD[1])
         voltage_fit_abN = (np.log((current_fit - param_abN[2]) / param_abN[0]) / param_abN[1]) #check if right indices
         voltage_fit_bN = (np.log((current_fit - param_bN[2]) / param_bN[0]) / param_bN[1])
 
-        self.bx.plot(voltage_fit_abd, current_fit, color = 'orange', linestyle = '--') #graph the tolerances
-        self.bx.plot(voltage_fit_bd, current_fit, color = 'orange', linestyle = '--')
+        #self.bx.plot(voltage_fit_abd, current_fit, color = 'orange', linestyle = '--') #graph the tolerances
+        #self.bx.plot(voltage_fit_bd, current_fit, color = 'orange', linestyle = '--')
         self.bx.plot(voltage_fit_abN, current_fit, color = 'cyan', linestyle = ':') #graph the tolerances
         self.bx.plot(voltage_fit_bN, current_fit, color = 'cyan', linestyle = ':')
         
         deviations = []
-        for i in range(3): #voltage_fit_abd
-            if i ==1:
-                differences = voltage_fit_abd - voltage_fit_abN
-                deviations.append(100* np.std(differences))
-            elif i==2:
-                differences = voltage_fit_abd - self.newFit
-                deviations.append(100* np.std(differences))
-            elif i==3:
-                differences = voltage_fit_abd - voltage_fit_bN
-                deviations.append(100* np.std(differences))
+        # for i in range(3): #voltage_fit_abd
+        #     if i ==1:
+        #         differences = voltage_fit_abd - voltage_fit_abN
+        #         deviations.append(100* np.std(differences))
+        #     elif i==2:
+        #         differences = voltage_fit_abd - self.newFit
+        #         deviations.append(100* np.std(differences))
+        #     elif i==3:
+        #         differences = voltage_fit_abd - voltage_fit_bN
+        #         deviations.append(100* np.std(differences))
         for i in range(3): #self.avgFit
             if i ==1:
                 differences = self.avgFit - voltage_fit_abN
@@ -255,25 +261,27 @@ class Diode:
             elif i==3:
                 differences = self.avgFit - voltage_fit_bN
                 deviations.append(100* np.std(differences))   
-        for i in range(3): #voltage_fit_bd
-            if i ==1:
-                differences = voltage_fit_bd - voltage_fit_abN
-                deviations.append(100* np.std(differences))
-            elif i==2:
-                differences = voltage_fit_bd - self.newFit
-                deviations.append(100* np.std(differences))
-            elif i==3:
-                differences = voltage_fit_bd - voltage_fit_bN
-                deviations.append(100* np.std(differences))   
+        # for i in range(3): #voltage_fit_bd
+        #     if i ==1:
+        #         differences = voltage_fit_bd - voltage_fit_abN
+        #         deviations.append(100* np.std(differences))
+        #     elif i==2:
+        #         differences = voltage_fit_bd - self.newFit
+        #         deviations.append(100* np.std(differences))
+        #     elif i==3:
+        #         differences = voltage_fit_bd - voltage_fit_bN
+        #         deviations.append(100* np.std(differences))   
         print(f"This diode's deviation from the a new one is {min(deviations)}")
-        
-
-
-
 
 diodeName = str(input("Name of Diode Being tested?: "))
 ohmlanda = Diode(diodeName)
-ohmlanda.GraphNew("R0xB")
+if 'master' in diodeName: #to add new data on a diode
+    print("You are now entering the data for a new diode...")
+    ohmlanda.CurveTrace()
+    ohmlanda.save_graphs()
+    exit(1)
+
+ohmlanda.GraphNew(diodeName)
 ohmlanda.CurveTrace()
 ohmlanda.standardDev()
 ohmlanda.save_graphs()
