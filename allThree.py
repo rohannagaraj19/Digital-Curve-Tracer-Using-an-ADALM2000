@@ -25,6 +25,8 @@ class Diode:
         self.name = name
         self.newFit = [] #stores the equation for the 'Average Voltage across new Diode'
         self.avgFit = [] #stores the equation for the 'Average Voltage across tested Diode'
+        self.currMax = 10 #max current it plots
+        self.currSample = 1000 #precision of plot
 
     def save_graphs(self):
         name_ = self.name
@@ -123,7 +125,7 @@ class Diode:
             #curve fitting
             param, _ = curve_fit(f=Exp, xdata=diodeV[i-1], ydata=current_data[i-1], p0=(0, 1, 0.1))
             I0, Vt, V_off = param
-            current_fit = np.linspace(0.001, 0.05, 100)
+            current_fit = np.linspace(0.001, self.currMax, self.currSample)
             voltage_fit = (np.log((current_fit - V_off) / I0) / Vt)
 
             # Plot IV curve
@@ -147,7 +149,7 @@ class Diode:
         self.bx.scatter(averageDiodeV, averageCurrent, marker = '.', s=20, edgecolor = 'black')
         param, _ = curve_fit(f=Exp, xdata=averageDiodeV, ydata=averageCurrent, p0=(0, 1, 0.1))
         I0, Vt, V_off = param
-        current_fit = np.linspace(0.001, 0.05, 100)
+        current_fit = np.linspace(0.001, self.currMax, self.currSample)
         voltage_fit_avg = (np.log((current_fit - V_off) / I0) / Vt)
         self.avgFit = voltage_fit_avg #set the class pointer
         self.bx.plot(voltage_fit_avg, current_fit, color = "orange", label = "Average Voltage across Diode (V)")
@@ -160,7 +162,7 @@ class Diode:
 
         self.bx.grid()
         self.bx.set_xlabel("Voltage Across Diode (V)")
-        self.bx.set_ylim([0, 0.05])
+        self.bx.set_ylim([0, self.currMax])
         self.bx.set_ylabel("Input Current (A)")
         self.bx.legend()
 
@@ -202,7 +204,7 @@ class Diode:
         self.newA = yAxis
         param, _ = curve_fit(f=Exp, xdata=xAxis, ydata=yAxis, p0=(0, 1, 0.1))
         I0, Vt, V_off = param
-        current_fit = np.linspace(0.001, 0.05, 100)
+        current_fit = np.linspace(0.001, self.currMax, self.currSample)
         voltage_fit_new = (np.log((current_fit - V_off) / I0) / Vt)
         self.bx.plot(voltage_fit_new, current_fit, color = "cyan", label = f"Average Voltage New {name} Diode (V)")
         self.newFit = voltage_fit_new
@@ -224,7 +226,7 @@ class Diode:
         below_tolerance_newV = list(below * x for x in newV) 
         below_tolerance_newA = list(below * x for x in newA)
 
-        current_fit= np.linspace(0.001, 0.05, 100)
+        current_fit= np.linspace(0.001, self.currMax, self.currSample)
         param_abN, _ = curve_fit(Exp, xdata = above_tolerance_newV, ydata= above_tolerance_newA, p0 = (0,1,0.1))
         param_bN, _ = curve_fit(Exp, xdata = below_tolerance_newV, ydata = below_tolerance_newA, p0 = (0,1,0.1))
         #param_abD, _ = curve_fit(Exp, xdata = above_tolerance_diodeV, ydata= above_tolerance_current, p0 = (0,1,0.1))
@@ -253,14 +255,14 @@ class Diode:
         #         deviations.append(100* np.std(differences))
         for i in range(3): #self.avgFit
             if i ==1:
-                differences = self.avgFit - voltage_fit_abN
-                deviations.append(100* np.std(differences))
+                differences = np.vstack((self.avgFit, voltage_fit_abN))
+                deviations.append(np.std(differences))
             elif i==2:
-                differences = self.avgFit - self.newFit
-                deviations.append(100* np.std(differences))
+                differences = np.vstack((self.avgFit, self.newFit))
+                deviations.append(np.std(differences))
             elif i==3:
-                differences = self.avgFit - voltage_fit_bN
-                deviations.append(100* np.std(differences))   
+                differences = np.vstack((self.avgFit - voltage_fit_bN))
+                deviations.append(np.std(differences))   
         # for i in range(3): #voltage_fit_bd
         #     if i ==1:
         #         differences = voltage_fit_bd - voltage_fit_abN
@@ -272,6 +274,10 @@ class Diode:
         #         differences = voltage_fit_bd - voltage_fit_bN
         #         deviations.append(100* np.std(differences))   
         print(f"This diode's deviation from the a new one is {min(deviations)}")
+        if(min(deviations) < 0.05): #if this deviation is less than 5% thats good enough 
+            print(f"This diode is still operational")
+        else:
+            print(f"This diode is too worn out and not advised for operation")
 
 diodeName = str(input("Name of Diode Being tested?: "))
 ohmlanda = Diode(diodeName)
