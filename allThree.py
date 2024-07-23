@@ -11,7 +11,7 @@ import csv
 def Exp(V, I0, Vt, V_off):
     return I0 * np.exp(V * Vt) + V_off
 class Diode:
-    def __init__(self, name):
+    def __init__(self, name, currentMax):
         self.fig, self.ax = plt.subplots() #input voltage and voltage response subplot
         self.fig2, self.bx = plt.subplots() #iv curve subplot
         self.colors = ['red', 'blue', 'green']
@@ -25,7 +25,7 @@ class Diode:
         self.name = name
         self.newFit = [] #stores the equation for the 'Average Voltage across new Diode'
         self.avgFit = [] #stores the equation for the 'Average Voltage across tested Diode'
-        self.currMax = 100 #max current it plots
+        self.currMax = currentMax #max current it plots
         self.currSample = 1000 #precision of plot (currSample amount of evenly spaced points)
 
     def save_graphs(self):
@@ -245,16 +245,7 @@ class Diode:
             elif i==2:
                 differences = np.vstack((self.avgFit, voltage_fit_bN))
                 deviations.append(np.std(differences))   
-        # for i in range(3): #voltage_fit_bd
-        #     if i ==1:
-        #         differences = voltage_fit_bd - voltage_fit_abN
-        #         deviations.append(100* np.std(differences))
-        #     elif i==2:
-        #         differences = voltage_fit_bd - self.newFit
-        #         deviations.append(100* np.std(differences))
-        #     elif i==3:
-        #         differences = voltage_fit_bd - voltage_fit_bN
-        #         deviations.append(100* np.std(differences))   
+
         print(f"This diode's deviation from the a new one is {(deviations)}")
         if(min(deviations) < 0.05): #if this deviation is less than 5% thats good enough 
             print(f"This diode is still operational")
@@ -263,7 +254,9 @@ class Diode:
 
 print("To input new diode data, please state the diode name and type 'new' after")
 diodeName = str(input("Name of Diode Being tested?: "))
-diode = Diode(diodeName)
+plot_max = str(input("Please specify the range of current (A) you want to plot (0.05 Amps will show all the sample data, 10 Amps and above will predict data up to that range): "))
+
+diode = Diode(diodeName, plot_max)
 if 'new' in diodeName: #to add new data on a diode
     print("You are now entering the data for a new diode...")
     diode.CurveTrace()
