@@ -261,6 +261,7 @@ class Diode:
         else:
             print(f"This diode is too worn out and not advised for operation")
 
+print("To input new diode data, please state the diode name and type 'new' after")
 diodeName = str(input("Name of Diode Being tested?: "))
 diode = Diode(diodeName)
 if 'new' in diodeName: #to add new data on a diode
