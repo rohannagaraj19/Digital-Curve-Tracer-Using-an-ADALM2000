@@ -8,6 +8,7 @@ import mpld3
 import pandas as pd
 import csv
 import os
+from sklearn.metrics import r2_score
 # Fit data to exponential model
 def Exp(V, I0, Vt, V_off):
     return I0 * np.exp(V * Vt) + V_off
@@ -242,18 +243,23 @@ class Diode:
         self.bx.plot(voltage_fit_bN, current_fit, color = 'cyan', linestyle = ':')
         
         deviations = []
+        rscores = []
         for i in range(3): #self.avgFit
             if i ==0:
-                differences = np.vstack((self.avgFit, voltage_fit_abN))
-                deviations.append(np.std(differences))
+                differences1 = np.vstack((self.avgFit, voltage_fit_abN))
+                deviations.append(np.std(differences1))
+                rscores.append(r2_score(differences1[0], differences1[1]))
             elif i==1:
-                differences = np.vstack((self.avgFit, self.newFit))
-                deviations.append(np.std(differences))
+                differences2 = np.vstack((self.avgFit, self.newFit))
+                deviations.append(np.std(differences2))
+                rscores.append(r2_score(differences2[0], differences2[1]))
             elif i==2:
-                differences = np.vstack((self.avgFit, voltage_fit_bN))
-                deviations.append(np.std(differences))   
+                differences3 = np.vstack((self.avgFit, voltage_fit_bN))
+                deviations.append(np.std(differences3)) 
+                rscores.append(r2_score(differences3[0], differences3[1]))  
 
         print(f"This diode's deviation from the a new one is {(deviations)}")
+        print(f"The rscores are: {rscores}")
         if(min(deviations) < 0.05): #if this deviation is less than 5% thats good enough 
             print(f"This diode is still operational")
         else:
