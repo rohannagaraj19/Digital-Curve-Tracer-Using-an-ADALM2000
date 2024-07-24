@@ -7,6 +7,7 @@ from scipy.optimize import curve_fit
 import mpld3
 import pandas as pd
 import csv
+import os
 # Fit data to exponential model
 def Exp(V, I0, Vt, V_off):
     return I0 * np.exp(V * Vt) + V_off
@@ -25,8 +26,9 @@ class Diode:
         self.name = name
         self.newFit = [] #stores the equation for the 'Average Voltage across new Diode'
         self.avgFit = [] #stores the equation for the 'Average Voltage across tested Diode'
-        self.currMax = currentMax #max current it plots
+        self.currMax = np.float64(currentMax) #max current it plots
         self.currSample = 1000 #precision of plot (currSample amount of evenly spaced points)
+        self.newSig = True #a signal to make sure standard dev doesnt run without a new graph
 
     def save_graphs(self):
         name_ = self.name
@@ -80,8 +82,8 @@ class Diode:
             aout = adam.getAnalogOut()
             aout.enableChannel(0, True)
             t = np.linspace(0, duration, signal_sample_rate * duration)
-            v_signal = 0.8 * t  #input signal equation
-            v_signal = np.clip(v_signal, 0, 5)
+            v_signal = 0.8*t  #input signal equation
+            #v_signal = np.clip(v_signal, 0, 5)
             aout.setCyclic(False)
             aout.setSampleRate(0, signal_sample_rate) #param: channel (0 means channel 1), sampling frequency of input signal (typically 1000 Hz but needs to be greater than the Nyquist rate)
             aout.push(0, v_signal.tolist())
@@ -195,7 +197,10 @@ class Diode:
             leName = 'R0xA'
         elif name[0] == 'R' and name[3] == 'B':
             leName = 'R0xB'
+        elif os.path.exists(os.path.join('diode_data', name + " new.csv")):
+            leName = name
         else:
+            self.newSig = False
             return None
         reader = pd.read_csv(f'diode_data/{leName} new.csv') #dataframe
         yAxis = reader['Average Current Through Diode (A)'].copy().dropna()
@@ -209,6 +214,8 @@ class Diode:
         self.bx.plot(voltage_fit_new, current_fit, color = "cyan", label = f"Average Voltage New {name} Diode (V)")
         self.newFit = voltage_fit_new
     def standardDev(self):
+        if self.newSig == False:
+            return None
         diodeV = self.averageV #set pointers to class variables (its annoying to keep typing self before every access of an array)
         current = self.averageA
         newV = self.newV
@@ -255,7 +262,8 @@ class Diode:
 print("To input new diode data, please state the diode name and type 'new' after")
 diodeName = str(input("Name of Diode Being tested?: "))
 plot_max = str(input("Please specify the range of current (A) you want to plot (0.05 Amps will show all the sample data, 10 Amps and above will predict data up to that range): "))
-
+if(plot_max == ""):
+    plot_max = 0.05
 diode = Diode(diodeName, plot_max)
 if 'new' in diodeName: #to add new data on a diode
     print("You are now entering the data for a new diode...")
