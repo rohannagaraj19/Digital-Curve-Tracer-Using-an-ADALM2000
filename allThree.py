@@ -86,8 +86,8 @@ class Diode:
             aout = adam.getAnalogOut()
             aout.enableChannel(0, True)
             t = np.linspace(0, duration, signal_sample_rate * duration)
-            v_signal = 0.8*t  #input signal equation
-            #v_signal = np.clip(v_signal, 0, 5)
+            v_signal = t  #input signal equation
+            v_signal = np.clip(v_signal, 0, 5)
             aout.setCyclic(False)
             aout.setSampleRate(0, signal_sample_rate) #param: channel (0 means channel 1), sampling frequency of input signal (typically 1000 Hz but needs to be greater than the Nyquist rate)
             aout.push(0, v_signal.tolist())
@@ -118,7 +118,7 @@ class Diode:
             self.ax.plot(time_x, inputV[i-1], label=f'Diode {i} Input Voltage (V)')
             
             # Calculate current and voltage for IV curve
-            resistance = 100  #what resistance is in series with the diode
+            resistance = 50  #what resistance is in series with the diode
             current_data[i-1] = list((inputV - diodeV) / resistance for inputV, diodeV in zip(inputV[i-1], diodeV[i-1]))
             current_data[i-1] = np.array(current_data[i-1]) #convert to an numpy array
             # Delete duplicate values of current now
@@ -255,7 +255,7 @@ class Diode:
             difference = np.abs(compare_curve - master_curve) #absolute difference between the two curves
             tolerance = 0.05 * master_curve #we can get the tolerance band with this
             within_tolerance = difference <= tolerance #we create a boolean array to see if a point is within the tolerance
-            percentage_within_tolerance = np.sum(within_tolerance) / len(within_tolerance) * 100 #now we just find the percentage of points that are "true" in the boolean array
+            percentage_within_tolerance = np.sum(within_tolerance) / len(within_tolerance) #now we just find the percentage of points that are "true" in the boolean array
             return np.float64(percentage_within_tolerance)
         
         # deviations = [] #contains all the standard deviation data
@@ -277,7 +277,7 @@ class Diode:
         # print(f"This diode's deviation from the a new one is {(deviations)}")
         # print(f"The rscores are: {rscores}")
         p_ofTolerance = tolerance_percentage(self.newFitV, self.avgFitV)
-        print(f"The percentage of the tested curve in the 5% band is: {p_ofTolerance}")
+        print(f"The percentage of the tested curve in the 5% band is: {100 * p_ofTolerance}")
         if(p_ofTolerance >= 0.9): #if 95% of the curve is within tolerance, the diode should be fine 
             print(f"This diode is still operational")
         else:

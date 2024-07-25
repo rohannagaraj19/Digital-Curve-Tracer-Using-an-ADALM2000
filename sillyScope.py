@@ -17,9 +17,9 @@ aout.enableChannel(1, True)
 
 # Set the signal frequency
 sampling_rate = 750000 # Set the sampling rate to 750 kHz
-
+dc = 4
 # Generate the signal
-t = np.linspace(0, 6, int(sampling_rate * 6))  # 0 to 6 seconds
+t = np.linspace(dc, dc, int(sampling_rate * 6))  # 0 to 6 seconds
 v = t  # v(t) = 0.8 * t
 
 # Normalize the signal to fit within the -5V to +5V range of ADALM2000
