@@ -25,11 +25,14 @@ class Diode:
         self.averageV = []
         self.averageA = []
         self.name = name
-        self.newFit = [] #stores the equation for the 'Average Voltage across new Diode'
-        self.avgFit = [] #stores the equation for the 'Average Voltage across tested Diode'
+        self.newFitV = [] #stores the equation for the 'Average Voltage across new Diode'
+        self.avgFitV = [] #stores the equation for the 'Average Voltage across tested Diode'
+        #self.newFitA = []
+        #self.avgFitA = []
         self.currMax = np.float64(currentMax) #max current it plots
         self.currSample = 1000 #precision of plot (currSample amount of evenly spaced points)
         self.newSig = True #a signal to make sure standard dev doesnt run without a new graph
+        #self.VoltageMax = 1.2 #the max rating for the diode
 
     def save_graphs(self):
         name_ = self.name
@@ -57,7 +60,7 @@ class Diode:
 
         for i in range(1, 4, 1): #iterate three times
             halt = str(input(f"Please configure diode {i} for tracing. Press 'y' and 'enter' when ready..."))
-            if halt != 'y': 
+            if not(halt == "y" or halt == "" or halt == "Yes" or halt == "Y" or halt == "yes" or halt == "yes daddy im ready"): 
                 exit(1) #quits program
 
             # Initialize the device
@@ -154,7 +157,8 @@ class Diode:
         I0, Vt, V_off = param
         current_fit = np.linspace(0.001, self.currMax, self.currSample)
         voltage_fit_avg = (np.log((current_fit - V_off) / I0) / Vt)
-        self.avgFit = voltage_fit_avg #set the class pointer
+        self.avgFitV = voltage_fit_avg #set the class pointer
+        #self.avgFitA = Exp(np.linspace(0,self.VoltageMax, 1000), I0, Vt, V_off)
         self.bx.plot(voltage_fit_avg, current_fit, color = "orange", label = "Average Voltage across Diode (V)")
 
         self.ax.grid()
@@ -213,12 +217,13 @@ class Diode:
         current_fit = np.linspace(0.001, self.currMax, self.currSample)
         voltage_fit_new = (np.log((current_fit - V_off) / I0) / Vt)
         self.bx.plot(voltage_fit_new, current_fit, color = "cyan", label = f"Average Voltage New {name} Diode (V)")
-        self.newFit = voltage_fit_new
+        self.newFitV = voltage_fit_new
+        #self.newFitA = Exp(np.linspace(0,self.VoltageMax, 1000), I0, Vt, V_off) #current(t) = voltage(t) this is the equation to use in standard dev becuz its actually exponential
     def standardDev(self):
         if self.newSig == False:
             return None
-        diodeV = self.averageV #set pointers to class variables (its annoying to keep typing self before every access of an array)
-        current = self.averageA
+        #diodeV = self.averageV #set pointers to class variables (its annoying to keep typing self before every access of an array)
+        #current = self.averageA
         newV = self.newV
         newA = self.newA
         tolerance = 0.05 #5 percent tolerance
@@ -233,34 +238,47 @@ class Diode:
 
         current_fit= np.linspace(0.001, self.currMax, self.currSample)
         param_abN, _ = curve_fit(Exp, xdata = above_tolerance_newV, ydata= above_tolerance_newA, p0 = (0,1,0.1))
+        I0_abn, Vt_abn, V_off_abn = param_abN
         param_bN, _ = curve_fit(Exp, xdata = below_tolerance_newV, ydata = below_tolerance_newA, p0 = (0,1,0.1))
+        I0_bn, Vt_bn, V_off_bn = param_bN
 
-        voltage_fit_abN = (np.log((current_fit - param_abN[2]) / param_abN[0]) / param_abN[1]) #check if right indices
-        voltage_fit_bN = (np.log((current_fit - param_bN[2]) / param_bN[0]) / param_bN[1])
+        voltage_fit_abN = (np.log((current_fit - V_off_abn) / I0_abn) / Vt_abn) #this is in a form that is useful for plotting numbers
+        voltage_fit_bN = (np.log((current_fit - V_off_bn) / I0_bn) / Vt_bn)
 
 
         self.bx.plot(voltage_fit_abN, current_fit, color = 'cyan', linestyle = ':') #graph the tolerances
         self.bx.plot(voltage_fit_bN, current_fit, color = 'cyan', linestyle = ':')
-        
-        deviations = [] #contains all the standard deviation data
-        rscores = [] #contains all the R^2 coefficient of determination data
-        for i in range(3): #self.avgFit
-            if i ==0:
-                differences1 = np.vstack((self.avgFit, voltage_fit_abN))
-                deviations.append(np.std(differences1))
-                rscores.append(r2_score(differences1[0], differences1[1]))
-            elif i==1:
-                differences2 = np.vstack((self.avgFit, self.newFit))
-                deviations.append(np.std(differences2))
-                rscores.append(r2_score(differences2[0], differences2[1]))
-            elif i==2:
-                differences3 = np.vstack((self.avgFit, voltage_fit_bN))
-                deviations.append(np.std(differences3)) 
-                rscores.append(r2_score(differences3[0], differences3[1]))  
 
-        print(f"This diode's deviation from the a new one is {(deviations)}")
-        print(f"The rscores are: {rscores}")
-        if(min(deviations) < 0.05): #if this deviation is less than 5% thats good enough 
+        #current_fit_abN = Exp(np.linspace(0,self.VoltageMax, 1000), I0_abn, Vt_abn, V_off_abn)
+        #current_fit_bN = Exp(np.linspace(0,self.VoltageMax, 1000), I0_bn, Vt_bn, V_off_bn)
+        def tolerance_percentage(master_curve, compare_curve):
+            difference = np.abs(compare_curve - master_curve) #absolute difference between the two curves
+            tolerance = 0.05 * master_curve #we can get the tolerance band with this
+            within_tolerance = difference <= tolerance #we create a boolean array to see if a point is within the tolerance
+            percentage_within_tolerance = np.sum(within_tolerance) / len(within_tolerance) * 100 #now we just find the percentage of points that are "true" in the boolean array
+            return np.float64(percentage_within_tolerance)
+        
+        # deviations = [] #contains all the standard deviation data
+        # rscores = [] #contains all the R^2 coefficient of determination data
+        # for i in range(3): #self.avgFitV
+        #     if i ==0:
+        #         differences1 = np.vstack((self.avgFitA, current_fit_abN))
+        #         deviations.append(np.std(differences1))
+        #         rscores.append(r2_score(self.avgFitA, current_fit_abN))
+        #     elif i==1:
+        #         differences2 = np.vstack((self.avgFitA, self.newFitA))
+        #         deviations.append(np.std(differences2))
+        #         rscores.append(r2_score(self.avgFitA, self.newFitA))
+        #     elif i==2:
+        #         differences3 = np.vstack((self.avgFitA, current_fit_bN))
+        #         deviations.append(np.std(differences3)) 
+        #         rscores.append(r2_score(self.avgFitA, current_fit_bN))  
+
+        # print(f"This diode's deviation from the a new one is {(deviations)}")
+        # print(f"The rscores are: {rscores}")
+        p_ofTolerance = tolerance_percentage(self.newFitV, self.avgFitV)
+        print(f"The percentage of the tested curve in the 5% band is: {p_ofTolerance}")
+        if(p_ofTolerance >= 0.9): #if 95% of the curve is within tolerance, the diode should be fine 
             print(f"This diode is still operational")
         else:
             print(f"This diode is too worn out and not advised for operation")
