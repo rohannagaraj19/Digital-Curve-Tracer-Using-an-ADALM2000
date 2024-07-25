@@ -105,8 +105,8 @@ class Diode:
 
             # Collect and process data
             diodeV[i-1], inputV[i-1] = np.array(ain.getSamples(num_output_samples)) #diodeV has all the channel 1 data and inputV has all the channel 2 data
-            print(f"diodeV length {len(diodeV[i-1])}")
-            print(f"inputV length {len(inputV[i-1])}")
+            #print(f"diodeV length {len(diodeV[i-1])}")
+            #print(f"inputV length {len(inputV[i-1])}")
             # First delete duplicate input voltages
             inputV[i-1], indices1 = np.unique(inputV[i-1], return_index=True)
             diodeV[i-1] = diodeV[i-1][indices1]
@@ -118,7 +118,7 @@ class Diode:
             self.ax.plot(time_x, inputV[i-1], label=f'Diode {i} Input Voltage (V)')
             
             # Calculate current and voltage for IV curve
-            resistance = 50  #what resistance is in series with the diode
+            resistance = 49.9  #what resistance is in series with the diode
             current_data[i-1] = list((inputV - diodeV) / resistance for inputV, diodeV in zip(inputV[i-1], diodeV[i-1]))
             current_data[i-1] = np.array(current_data[i-1]) #convert to an numpy array
             # Delete duplicate values of current now
