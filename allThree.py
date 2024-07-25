@@ -18,7 +18,7 @@ class Diode:
         self.fig2, self.bx = plt.subplots() #iv curve subplot
         self.colors = ['red', 'blue', 'green']
         self.diodeV = [] #contains voltage data across the diode ()
-        self.current_data = []
+        self.current_data = [] #contains the input current data
         self.inputV = []
         self.newV = [] #contains voltage response of new diode
         self.newA = [] #contains current input of new diode
@@ -242,8 +242,8 @@ class Diode:
         self.bx.plot(voltage_fit_abN, current_fit, color = 'cyan', linestyle = ':') #graph the tolerances
         self.bx.plot(voltage_fit_bN, current_fit, color = 'cyan', linestyle = ':')
         
-        deviations = []
-        rscores = []
+        deviations = [] #contains all the standard deviation data
+        rscores = [] #contains all the R^2 coefficient of determination data
         for i in range(3): #self.avgFit
             if i ==0:
                 differences1 = np.vstack((self.avgFit, voltage_fit_abN))
