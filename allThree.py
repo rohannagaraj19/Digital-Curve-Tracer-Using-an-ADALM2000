@@ -268,7 +268,7 @@ class Diode:
             print(f"This diode is still operational")
         else:
             print(f"This diode is too worn out and not advised for operation")
-        #self.ax.text(x= 600, y=20, s= f'Percentage in band: {100 * p_ofTolerance}',fontdict= 14) #NEED TO FIX
+        #self.bx.text(x= 0, y=0.35, s= f'Percentage in band: {100 * p_ofTolerance}',fontdict= None) #NEED TO FIX
 
 print("To input new diode data, please state the diode name and type 'new' after")
 diodeName = str(input("Name of Diode Being tested?: "))
