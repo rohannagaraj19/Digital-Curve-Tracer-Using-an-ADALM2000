@@ -63,7 +63,7 @@ ax.set_ylim([0, 7])
 ax.set_ylabel("Voltage")
 ax.legend()
 p = 0.003
-ax.text(x= -5, y=60, s= f'Perc',fontdict= 14) #NEED TO FIX!!!
+ax.text(x= 4, y=6, s= f'Perc',fontdict= None) #NEED TO FIX!!!
 plt.show()
 
 
