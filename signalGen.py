@@ -1,41 +1,71 @@
 import libm2k
 import numpy as np
 import time
+import matplotlib.pyplot as plt
+import scipy.signal as sig
+#this is code to play around with different time signals
+#this will input a signal of your choosing and return an graph of the oscilloscope readings
+#graphs a voltage and time graph
 
-# Initialize context
-ctx = libm2k.m2kOpen()
-if ctx is None:
-    print("Connection Error: No ADALM2000 device found")
-    exit(1)
 
-# Get the analog out channel
-aout = ctx.getAnalogOut()
+# Initialize the device
+uri = libm2k.getAllContexts()
+if uri is None:
+    print("Connection Error: No ADALM2000 device available/connected to your PC.")
+    exit(1) #quits program
+else:
+    print("Successfully connected ADALM2000...")
 
-# Enable both channels (even if you only use one)
+adam = libm2k.m2kOpen(uri[0])
+adam.reset() #resets the kernel buffer (MUST HAVE FOR CALIBRATION)
+adam.calibrate() #sets the kernel buffer for the oscilloscope
+adam.calibrateDAC() #digital to analog converter calibration (sets the kernel buffer)
+print("Calibration successful!")
+
+# Define the signal parameters
+duration = 6  # Duration in seconds
+scope_sample_rate = 1000  #sample rate of the oscilloscope
+signal_sample_rate = 75000 # Total samples per second for output signal (must surpass Nyquist Sample rate to prevent aliasing)
+num_output_samples = duration * scope_sample_rate 
+
+aout = adam.getAnalogOut()
 aout.enableChannel(0, True)
-aout.enableChannel(1, True)
+t = np.linspace(0, duration, signal_sample_rate * duration)
 
-# Set the signal frequency
-sampling_rate = 750000 # Set the sampling rate to 750 kHz
-dc = 4
-# Generate the signal
-t = np.linspace(dc, dc, int(sampling_rate * 6))  # 0 to 6 seconds
-v = t  # v(t) = 0.8 * t
+#v_signal = 1.5*t  #input signal equation
+v_signal = 4* np.sin(3*t)
 
-# Normalize the signal to fit within the -5V to +5V range of ADALM2000
-#v = np.clip(v, 0, 5)
-
-# Load the signal to the analog output buffer
+v_signal = np.clip(v_signal, 0, 5) #the adalm can only push a voltage of 5V... max current with amplifier is around 500 mA
 aout.setCyclic(False)
-aout.setSampleRate(0, sampling_rate)
-aout.push(0, v.tolist())  # Channel 0 output
+aout.setSampleRate(0, signal_sample_rate) #param: channel (0 means channel 1), sampling frequency of input signal (typically 1000 Hz but needs to be greater than the Nyquist rate)
+aout.push(0, v_signal.tolist())
 
-# Let it run for the duration of the signal
-time.sleep(6)
+# Oscilloscope setup
+ain = adam.getAnalogIn()
+ain.setSampleRate(scope_sample_rate)  # sample rate
+# Initialize analog input (oscilloscope) for Channel 1
+ain.enableChannel(libm2k.ANALOG_IN_CHANNEL_1, True)  # Channel 1
+ain.setRange(libm2k.ANALOG_IN_CHANNEL_1, 0, 5)  # Channel 1 range
 
-# Disable channels after use
-aout.enableChannel(0, False)
-aout.enableChannel(1, False)
+# Initialize analog input (oscilloscope) for Channel 2
+ain.enableChannel(libm2k.ANALOG_IN_CHANNEL_2, True)  # Channel 2
+ain.setRange(libm2k.ANALOG_IN_CHANNEL_2, 0, 5)  # Channel 2 range
 
-# Disconnect the device
-libm2k.contextClose(ctx)
+voltageDiode, voltageInput = np.array(ain.getSamples(num_output_samples))
+time_x = np.linspace(0, duration, len(voltageDiode))
+
+fig, ax = plt.subplots()
+ax.plot(time_x, voltageDiode, label=f'Diode Voltage (V)', color = "red")
+ax.plot(time_x, voltageInput, label=f'Diode Input Voltage (V)', color = "purple")
+ax.grid()
+ax.set_xlabel('Time(s)')
+ax.set_ylim([0, 7])
+ax.set_ylabel("Voltage")
+ax.legend()
+p = 0.003
+ax.text(x= -5, y=60, s= f'Perc',fontdict= 14) #NEED TO FIX!!!
+plt.show()
+
+
+ain.stopAcquisition()
+libm2k.contextClose(adam)

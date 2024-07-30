@@ -8,7 +8,7 @@ import mpld3
 import pandas as pd
 import csv
 import os
-from sklearn.metrics import r2_score
+
 # Fit data to exponential model
 def Exp(V, I0, Vt, V_off):
     return I0 * np.exp(V * Vt) + V_off
@@ -60,7 +60,7 @@ class Diode:
 
         for i in range(1, 4, 1): #iterate three times
             halt = str(input(f"Please configure diode {i} for tracing. Press 'y' and 'enter' when ready..."))
-            if not(halt == "y" or halt == "" or halt == "Yes" or halt == "Y" or halt == "yes" or halt == "yes daddy im ready"): 
+            if not(halt == "y" or halt == "" or ("yes" in halt) or ("Yes" in halt)): 
                 exit(1) #quits program
 
             # Initialize the device
@@ -79,15 +79,17 @@ class Diode:
             
             # Define the signal parameters
             duration = 6  # Duration in seconds
-            scope_sample_rate = 1000  #sample rate of the oscilloscope
-            signal_sample_rate = 1000 # Total samples per second for output signal (must surpass Nyquist Sample rate to prevent aliasing)
-            num_output_samples = duration * 1000 
+            scope_sample_rate = 1000  #sample rate of the oscilloscope (max is 1000)
+            signal_sample_rate = 75000 # Total samples per second for output signal (must surpass Nyquist Sample rate to prevent aliasing)
+            num_output_samples = duration * scope_sample_rate 
 
             aout = adam.getAnalogOut()
             aout.enableChannel(0, True)
             t = np.linspace(0, duration, signal_sample_rate * duration)
-            v_signal = t  #input signal equation
+            
+            v_signal = 4*t  #input signal equation
             v_signal = np.clip(v_signal, 0, 5)
+            
             aout.setCyclic(False)
             aout.setSampleRate(0, signal_sample_rate) #param: channel (0 means channel 1), sampling frequency of input signal (typically 1000 Hz but needs to be greater than the Nyquist rate)
             aout.push(0, v_signal.tolist())
@@ -118,7 +120,10 @@ class Diode:
             self.ax.plot(time_x, inputV[i-1], label=f'Diode {i} Input Voltage (V)')
             
             # Calculate current and voltage for IV curve
-            resistance = 49.9  #what resistance is in series with the diode
+            resistance = 10.1  #what resistance is in series with the diode
+            #^^THIS IS SUPER IMPORTANT FOR PROPER CURRENT CALCULATIONS!!!!!!!!!!!!!!!
+            #PLEASE UPDATE THIS VALUE IF YOU CHANGE THE RESISTANCE OF THE CIRCUIT
+
             current_data[i-1] = list((inputV - diodeV) / resistance for inputV, diodeV in zip(inputV[i-1], diodeV[i-1]))
             current_data[i-1] = np.array(current_data[i-1]) #convert to an numpy array
             # Delete duplicate values of current now
@@ -256,38 +261,20 @@ class Diode:
             tolerance = 0.05 * master_curve #we can get the tolerance band with this
             within_tolerance = difference <= tolerance #we create a boolean array to see if a point is within the tolerance
             percentage_within_tolerance = np.sum(within_tolerance) / len(within_tolerance) #now we just find the percentage of points that are "true" in the boolean array
-            return np.float64(percentage_within_tolerance)
-        
-        # deviations = [] #contains all the standard deviation data
-        # rscores = [] #contains all the R^2 coefficient of determination data
-        # for i in range(3): #self.avgFitV
-        #     if i ==0:
-        #         differences1 = np.vstack((self.avgFitA, current_fit_abN))
-        #         deviations.append(np.std(differences1))
-        #         rscores.append(r2_score(self.avgFitA, current_fit_abN))
-        #     elif i==1:
-        #         differences2 = np.vstack((self.avgFitA, self.newFitA))
-        #         deviations.append(np.std(differences2))
-        #         rscores.append(r2_score(self.avgFitA, self.newFitA))
-        #     elif i==2:
-        #         differences3 = np.vstack((self.avgFitA, current_fit_bN))
-        #         deviations.append(np.std(differences3)) 
-        #         rscores.append(r2_score(self.avgFitA, current_fit_bN))  
-
-        # print(f"This diode's deviation from the a new one is {(deviations)}")
-        # print(f"The rscores are: {rscores}")
+            return percentage_within_tolerance
         p_ofTolerance = tolerance_percentage(self.newFitV, self.avgFitV)
         print(f"The percentage of the tested curve in the 5% band is: {100 * p_ofTolerance}")
         if(p_ofTolerance >= 0.9): #if 95% of the curve is within tolerance, the diode should be fine 
             print(f"This diode is still operational")
         else:
             print(f"This diode is too worn out and not advised for operation")
+        #self.ax.text(x= 600, y=20, s= f'Percentage in band: {100 * p_ofTolerance}',fontdict= 14) #NEED TO FIX
 
 print("To input new diode data, please state the diode name and type 'new' after")
 diodeName = str(input("Name of Diode Being tested?: "))
-plot_max = str(input("Please specify the range of current (A) you want to plot (0.05 Amps will show all the sample data, 10 Amps and above will predict data up to that range): "))
+plot_max = str(input("Please specify the range of current (A) you want to plot (0.5 Amps will show all the sample data, 10 Amps and above will predict data up to that range): "))
 if(plot_max == ""):
-    plot_max = 0.05
+    plot_max = 0.5
 diode = Diode(diodeName, plot_max)
 if 'new' in diodeName: #to add new data on a diode
     print("You are now entering the data for a new diode...")
