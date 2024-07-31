@@ -33,7 +33,7 @@ aout.enableChannel(0, True)
 t = np.linspace(0, duration, signal_sample_rate * duration)
 
 #v_signal = 1.5*t  #input signal equation
-v_signal = 4* np.sin(3*t)
+v_signal = t
 
 v_signal = np.clip(v_signal, 0, 5) #the adalm can only push a voltage of 5V... max current with amplifier is around 500 mA
 aout.setCyclic(False)
@@ -63,7 +63,7 @@ ax.set_ylim([0, 7])
 ax.set_ylabel("Voltage")
 ax.legend()
 p = 0.003
-ax.text(x= 4, y=6, s= f'Perc',fontdict= None) #NEED TO FIX!!!
+#ax.text(x= 4, y=6, s= f'Perc',fontdict= None) #NEED TO FIX!!!
 plt.show()
 
 

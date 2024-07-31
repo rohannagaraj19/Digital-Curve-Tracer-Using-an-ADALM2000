@@ -13,6 +13,9 @@ import os
 def Exp(V, I0, Vt, V_off):
     return I0 * np.exp(V * Vt) + V_off
 class Diode:
+      #what resistance is in series with the diode
+    #^^THIS IS SUPER IMPORTANT FOR PROPER CURRENT CALCULATIONS!!!!!!!!!!!!!!!
+    #PLEASE UPDATE THIS VALUE IF YOU CHANGE THE RESISTANCE OF THE CIRCUIT
     def __init__(self, name, currentMax):
         self.fig, self.ax = plt.subplots() #input voltage and voltage response subplot
         self.fig2, self.bx = plt.subplots() #iv curve subplot
@@ -22,17 +25,18 @@ class Diode:
         self.inputV = []
         self.newV = [] #contains voltage response of new diode
         self.newA = [] #contains current input of new diode
-        self.averageV = []
-        self.averageA = []
+        self.averageV = [] #contains the average value of the three recorded voltages
+        self.averageA = [] #same for current ^
         self.name = name
         self.newFitV = [] #stores the equation for the 'Average Voltage across new Diode'
         self.avgFitV = [] #stores the equation for the 'Average Voltage across tested Diode'
-        #self.newFitA = []
-        #self.avgFitA = []
         self.currMax = np.float64(currentMax) #max current it plots
         self.currSample = 1000 #precision of plot (currSample amount of evenly spaced points)
         self.newSig = True #a signal to make sure standard dev doesnt run without a new graph
-        #self.VoltageMax = 1.2 #the max rating for the diode
+        self.resistance = 10.1      #what resistance is in series with the diode
+    #^^THIS IS SUPER IMPORTANT FOR PROPER CURRENT CALCULATIONS!!!!!!!!!!!!!!!
+    #PLEASE UPDATE THIS VALUE IF YOU CHANGE THE RESISTANCE OF THE CIRCUIT
+        self.tolerance = 0.5 #5 percent tolerance
 
     def save_graphs(self):
         name_ = self.name
@@ -60,7 +64,7 @@ class Diode:
 
         for i in range(1, 4, 1): #iterate three times
             halt = str(input(f"Please configure diode {i} for tracing. Press 'y' and 'enter' when ready..."))
-            if not(halt == "y" or halt == "" or ("yes" in halt) or ("Yes" in halt)): 
+            if not(halt == "y" or halt == "" or ("yes" in halt) or ("Yes" in halt) or halt == "Y"): 
                 exit(1) #quits program
 
             # Initialize the device
@@ -120,9 +124,7 @@ class Diode:
             self.ax.plot(time_x, inputV[i-1], label=f'Diode {i} Input Voltage (V)')
             
             # Calculate current and voltage for IV curve
-            resistance = 10.1  #what resistance is in series with the diode
-            #^^THIS IS SUPER IMPORTANT FOR PROPER CURRENT CALCULATIONS!!!!!!!!!!!!!!!
-            #PLEASE UPDATE THIS VALUE IF YOU CHANGE THE RESISTANCE OF THE CIRCUIT
+            resistance = self.resistance
 
             current_data[i-1] = list((inputV - diodeV) / resistance for inputV, diodeV in zip(inputV[i-1], diodeV[i-1]))
             current_data[i-1] = np.array(current_data[i-1]) #convert to an numpy array
@@ -134,7 +136,8 @@ class Diode:
 
 
             #curve fitting
-            param, _ = curve_fit(f=Exp, xdata=diodeV[i-1], ydata=current_data[i-1], p0=(0, 1, 0.1))
+            param, _ = curve_fit(f=Exp, xdata=diodeV[i-1], ydata=current_data[i-1], p0=(0, 1, 0.1)) #default p0 that stores the initial guess of all the coefficients of the exponential function
+            #param, cov = curve_fit(f=Exp, xdata=diodeV[i-1], ydata=current_data[i-1], p0=(0, 1, 0.1)) #in case you want to use the covariance matrix to understand how well the curve is fit
             I0, Vt, V_off = param
             current_fit = np.linspace(0.001, self.currMax, self.currSample)
             voltage_fit = (np.log((current_fit - V_off) / I0) / Vt)
@@ -208,7 +211,7 @@ class Diode:
         elif name[0] == 'R' and name[3] == 'B':
             leName = 'R0xB'
         elif os.path.exists(os.path.join('diode_data', name + " new.csv")):
-            leName = name
+            leName = name #only works for non R0xA and R0xB diodes... needs the 
         else:
             self.newSig = False
             return None
@@ -231,7 +234,7 @@ class Diode:
         #current = self.averageA
         newV = self.newV
         newA = self.newA
-        tolerance = 0.05 #5 percent tolerance
+        tolerance = self.tolerance
         above = 1/(1+tolerance)
         below = 1/(1-tolerance)
 
@@ -258,17 +261,18 @@ class Diode:
         #current_fit_bN = Exp(np.linspace(0,self.VoltageMax, 1000), I0_bn, Vt_bn, V_off_bn)
         def tolerance_percentage(master_curve, compare_curve):
             difference = np.abs(compare_curve - master_curve) #absolute difference between the two curves
-            tolerance = 0.05 * master_curve #we can get the tolerance band with this
+            tolerance = self.tolerance * master_curve #we can get the tolerance band with this
             within_tolerance = difference <= tolerance #we create a boolean array to see if a point is within the tolerance
             percentage_within_tolerance = np.sum(within_tolerance) / len(within_tolerance) #now we just find the percentage of points that are "true" in the boolean array
             return percentage_within_tolerance
         p_ofTolerance = tolerance_percentage(self.newFitV, self.avgFitV)
+        self.bx.text(x=0.25, y=0.135, s= f"P_ofTolerance: {p_ofTolerance*100}", fontdict= None)
         print(f"The percentage of the tested curve in the 5% band is: {100 * p_ofTolerance}")
         if(p_ofTolerance >= 0.9): #if 95% of the curve is within tolerance, the diode should be fine 
             print(f"This diode is still operational")
         else:
             print(f"This diode is too worn out and not advised for operation")
-        #self.bx.text(x= 0, y=0.35, s= f'Percentage in band: {100 * p_ofTolerance}',fontdict= None) #NEED TO FIX
+
 
 print("To input new diode data, please state the diode name and type 'new' after")
 diodeName = str(input("Name of Diode Being tested?: "))
