@@ -1,54 +1,49 @@
 #created by Rohan Nagaraj
 #for the test of diode operation
 import libm2k #library for microcontroller access on ADALM2000
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
-import mpld3
-import pandas as pd
-import csv
-import os
+import numpy as np #linear algebra library
+import matplotlib.pyplot as plt #graph plotting library
+from scipy.optimize import curve_fit #curve fit library
+import mpld3 #will import the most recent graphs to an interactive html
+import pandas as pd #this is how we read and write csv files 
+import csv #this is how we save csv files
+import os #this is how we access some folders and files
 
 # Fit data to exponential model
 def Exp(V, I0, Vt, V_off):
-    return I0 * np.exp(V * Vt) + V_off
+    return I0 * np.exp(V * Vt) + V_off #our curves have an equation of this form... will return another array with each value corresponding to the equations t value
 class Diode:
-      #what resistance is in series with the diode
-    #^^THIS IS SUPER IMPORTANT FOR PROPER CURRENT CALCULATIONS!!!!!!!!!!!!!!!
-    #PLEASE UPDATE THIS VALUE IF YOU CHANGE THE RESISTANCE OF THE CIRCUIT
-    def __init__(self, name, currentMax):
+    def __init__(self, name, currentMax, resistance_): #contructor... contains all the class variables
         self.fig, self.ax = plt.subplots() #input voltage and voltage response subplot
         self.fig2, self.bx = plt.subplots() #iv curve subplot
-        self.colors = ['red', 'blue', 'green']
+        self.colors = ['red', 'blue', 'green'] #colors used to plot diode 1, 2, and 3
         self.diodeV = [] #contains voltage data across the diode ()
         self.current_data = [] #contains the input current data
-        self.inputV = []
+        self.inputV = [] #contains the measured input voltage data
         self.newV = [] #contains voltage response of new diode
         self.newA = [] #contains current input of new diode
         self.averageV = [] #contains the average value of the three recorded voltages
         self.averageA = [] #same for current ^
-        self.name = name
+        self.name = name #name of the diode being graphed
         self.newFitV = [] #stores the equation for the 'Average Voltage across new Diode'
         self.avgFitV = [] #stores the equation for the 'Average Voltage across tested Diode'
         self.currMax = np.float64(currentMax) #max current it plots
         self.currSample = 1000 #precision of plot (currSample amount of evenly spaced points)
         self.newSig = True #a signal to make sure standard dev doesnt run without a new graph
-        self.resistance = 10.1      #what resistance is in series with the diode
-    #^^THIS IS SUPER IMPORTANT FOR PROPER CURRENT CALCULATIONS!!!!!!!!!!!!!!!
-    #PLEASE UPDATE THIS VALUE IF YOU CHANGE THE RESISTANCE OF THE CIRCUIT
+        self.resistance = resistance_      #what resistance is in series with the diode
         self.tolerance = 0.5 #5 percent tolerance
 
-    def save_graphs(self):
+    def save_graphs(self): #called at the end of the program... saves all the graphs and data in a folder
         name_ = self.name
-        mpld3.save_html(self.fig, "diode_graphs/inputOutputVoltage.html")
+        mpld3.save_html(self.fig, "diode_graphs/inputOutputVoltage.html") #saves the graph as an interactive plot (will overwrite every time you run the program)
         mpld3.save_html(self.fig2, "diode_graphs/IVCurve.html")
-        self.fig.savefig('diode_graphs/vtGraph.png')
-        self.fig2.savefig(f'diode_graphs/{name_}.png')
+        self.fig.savefig('diode_graphs/vtGraph.png') #saves the graph as a png (this is the voltage vs time graph)
+        self.fig2.savefig(f'diode_graphs/{name_}.png') #the current vs voltage graph
         plt.show()
 
-    def CurveTrace(self):
+    def CurveTrace(self): #this is the only function that uses the ADALM2000 hardware and circuit
         diodeV = []
-        for i in range(3):
+        for i in range(3): #i do this so diodeV can be a 3x1 array... ex: [[1,2,4], [6,3,1], [9,4,8]]
             diodeV.append([])
         self.diodeV = diodeV #sets these as class variables for access in other functions
 
@@ -68,7 +63,7 @@ class Diode:
                 exit(1) #quits program
 
             # Initialize the device
-            uri = libm2k.getAllContexts()
+            uri = libm2k.getAllContexts() #an array of all the ip addresses available
             if uri is None:
                 print("Connection Error: No ADALM2000 device available/connected to your PC.")
                 exit(1) #quits program
@@ -87,35 +82,32 @@ class Diode:
             signal_sample_rate = 75000 # Total samples per second for output signal (must surpass Nyquist Sample rate to prevent aliasing)
             num_output_samples = duration * scope_sample_rate 
 
-            aout = adam.getAnalogOut()
-            aout.enableChannel(0, True)
-            t = np.linspace(0, duration, signal_sample_rate * duration)
+            aout = adam.getAnalogOut() #an object that has all the functions for the signal generator
+            aout.enableChannel(0, True) #enables channel 1 (indexed at 0)... if it said aout.enableChannel(1,True) then it turned on channel 2
+            t = np.linspace(0, duration, signal_sample_rate * duration) #evenly spaced array of float numbers that we use as a time input
             
             v_signal = 4*t  #input signal equation
-            v_signal = np.clip(v_signal, 0, 5)
+            v_signal = np.clip(v_signal, 0, 5) #will clip off the values in the arrays that are less than 0 and greater than 5
             
-            aout.setCyclic(False)
+            aout.setCyclic(False) #makes it so the signal doesn't repeat
             aout.setSampleRate(0, signal_sample_rate) #param: channel (0 means channel 1), sampling frequency of input signal (typically 1000 Hz but needs to be greater than the Nyquist rate)
-            aout.push(0, v_signal.tolist())
+            aout.push(0, v_signal.tolist()) #this is how we tell the signal generator what voltages to output
 
             # Oscilloscope setup
-            ain = adam.getAnalogIn()
+            ain = adam.getAnalogIn() #gives us an object that contains all the functions for the oscilloscope
             ain.setSampleRate(scope_sample_rate)  # sample rate
             # Initialize analog input (oscilloscope) for Channel 1
-            ain.enableChannel(libm2k.ANALOG_IN_CHANNEL_1, True)  # Channel 1
-            ain.setRange(libm2k.ANALOG_IN_CHANNEL_1, 0, 5)  # Channel 1 range
+            ain.enableChannel(libm2k.ANALOG_IN_CHANNEL_1, True)  # Channel 1 (the orange cables)
+            ain.setRange(libm2k.ANALOG_IN_CHANNEL_1, 0, 5)  # Channel 1 range (measures from 0 to 5 V)
 
             # Initialize analog input (oscilloscope) for Channel 2
-            ain.enableChannel(libm2k.ANALOG_IN_CHANNEL_2, True)  # Channel 2
+            ain.enableChannel(libm2k.ANALOG_IN_CHANNEL_2, True)  # Channel 2 (the blue cables)
             ain.setRange(libm2k.ANALOG_IN_CHANNEL_2, 0, 5)  # Channel 2 range
 
             # Collect and process data
             diodeV[i-1], inputV[i-1] = np.array(ain.getSamples(num_output_samples)) #diodeV has all the channel 1 data and inputV has all the channel 2 data
-            #print(f"diodeV length {len(diodeV[i-1])}")
-            #print(f"inputV length {len(inputV[i-1])}")
-            # First delete duplicate input voltages
-            inputV[i-1], indices1 = np.unique(inputV[i-1], return_index=True)
-            diodeV[i-1] = diodeV[i-1][indices1]
+            inputV[i-1], indices1 = np.unique(inputV[i-1], return_index=True) #delete all duplicate values (we are getting the indices that were kept from the original)
+            diodeV[i-1] = diodeV[i-1][indices1] #this is a continuation of deleting all dup values
             # Time characteristics
             time_x = np.linspace(0, duration, len(diodeV[i-1]))
 
@@ -126,12 +118,12 @@ class Diode:
             # Calculate current and voltage for IV curve
             resistance = self.resistance
 
-            current_data[i-1] = list((inputV - diodeV) / resistance for inputV, diodeV in zip(inputV[i-1], diodeV[i-1]))
+            current_data[i-1] = list((inputV - diodeV) / resistance for inputV, diodeV in zip(inputV[i-1], diodeV[i-1])) #basic KVL formula
             current_data[i-1] = np.array(current_data[i-1]) #convert to an numpy array
             # Delete duplicate values of current now
             diodeV[i-1], indices = np.unique(diodeV[i-1], return_index=True)
             current_data[i-1] = current_data[i-1][indices]
-            diodeV[i-1] = np.clip(diodeV[i-1], a_min=0, a_max=10e6)
+            diodeV[i-1] = np.clip(diodeV[i-1], a_min=0, a_max=10e6) #we throw away all the negative values
 
 
 
@@ -139,23 +131,19 @@ class Diode:
             param, _ = curve_fit(f=Exp, xdata=diodeV[i-1], ydata=current_data[i-1], p0=(0, 1, 0.1)) #default p0 that stores the initial guess of all the coefficients of the exponential function
             #param, cov = curve_fit(f=Exp, xdata=diodeV[i-1], ydata=current_data[i-1], p0=(0, 1, 0.1)) #in case you want to use the covariance matrix to understand how well the curve is fit
             I0, Vt, V_off = param
-            current_fit = np.linspace(0.001, self.currMax, self.currSample)
-            voltage_fit = (np.log((current_fit - V_off) / I0) / Vt)
+            current_fit = np.linspace(0.001, self.currMax, self.currSample) 
+            voltage_fit = (np.log((current_fit - V_off) / I0) / Vt) #this is our v(current) equation... we flip the exponential function so it graphs nicely...
 
             # Plot IV curve
             self.bx.scatter(diodeV[i-1], current_data[i-1], marker='.', s=20, edgecolor='black')
-            self.bx.plot(voltage_fit, current_fit, color=self.colors[i-1], label=f'{self.name} diode {i}')
+            self.bx.plot(voltage_fit, current_fit, color=self.colors[i-1], label=f'{self.name} diode {i}') #notice we graph it flipped again so its exponential
 
             
-            ain.stopAcquisition()
-            libm2k.contextClose(adam)
-
-        # Finalize and save plots
-        #print(f"Length of diodeV's values {len(diodeV[0])}, {len(diodeV[1])}, {len(diodeV[2])}")
-        #print(f"Length of current_data's values {len(current_data[0])}, {len(current_data[1])}, {len(current_data[2])}")
+            ain.stopAcquisition() #stops signal generator and oscillscope
+            libm2k.contextClose(adam) #stops reading and writing data here from ADALM2000
         
         #find averages of voltage response and current input
-        averageDiodeV = [sum(x)/len(x) for x in zip(*diodeV)]
+        averageDiodeV = [sum(x)/len(x) for x in zip(*diodeV)] 
         averageCurrent = [sum(x)/len(x) for x in zip(*current_data)]
         self.averageV = averageDiodeV #set pointers to the lists in the class variables
         self.averageA = averageCurrent
@@ -166,7 +154,6 @@ class Diode:
         current_fit = np.linspace(0.001, self.currMax, self.currSample)
         voltage_fit_avg = (np.log((current_fit - V_off) / I0) / Vt)
         self.avgFitV = voltage_fit_avg #set the class pointer
-        #self.avgFitA = Exp(np.linspace(0,self.VoltageMax, 1000), I0, Vt, V_off)
         self.bx.plot(voltage_fit_avg, current_fit, color = "orange", label = "Average Voltage across Diode (V)")
 
         self.ax.grid()
@@ -202,7 +189,7 @@ class Diode:
                             'Current Through Diode 1 (A)', 'Current Through Diode 2 (A)', 'Current Through Diode 3 (A)',
                             'Input Voltage'])
             writer.writerows(rows)
-        #plt.show()
+        
 
 
     def GraphNew(self, name):
@@ -216,7 +203,7 @@ class Diode:
             self.newSig = False
             return None
         reader = pd.read_csv(f'diode_data/{leName} new.csv') #dataframe
-        yAxis = reader['Average Current Through Diode (A)'].copy().dropna()
+        yAxis = reader['Average Current Through Diode (A)'].copy().dropna() #removes all the null values from the csv file and puts the actual data in an array
         xAxis = reader['Average Diode Voltage (V)'].copy().dropna()
         self.newV = xAxis #set variables to class
         self.newA = yAxis
@@ -226,12 +213,10 @@ class Diode:
         voltage_fit_new = (np.log((current_fit - V_off) / I0) / Vt)
         self.bx.plot(voltage_fit_new, current_fit, color = "cyan", label = f"Average Voltage New {name} Diode (V)")
         self.newFitV = voltage_fit_new
-        #self.newFitA = Exp(np.linspace(0,self.VoltageMax, 1000), I0, Vt, V_off) #current(t) = voltage(t) this is the equation to use in standard dev becuz its actually exponential
-    def standardDev(self):
+    
+    def percentInBand(self): 
         if self.newSig == False:
             return None
-        #diodeV = self.averageV #set pointers to class variables (its annoying to keep typing self before every access of an array)
-        #current = self.averageA
         newV = self.newV
         newA = self.newA
         tolerance = self.tolerance
@@ -257,8 +242,6 @@ class Diode:
         self.bx.plot(voltage_fit_abN, current_fit, color = 'cyan', linestyle = ':') #graph the tolerances
         self.bx.plot(voltage_fit_bN, current_fit, color = 'cyan', linestyle = ':')
 
-        #current_fit_abN = Exp(np.linspace(0,self.VoltageMax, 1000), I0_abn, Vt_abn, V_off_abn)
-        #current_fit_bN = Exp(np.linspace(0,self.VoltageMax, 1000), I0_bn, Vt_bn, V_off_bn)
         def tolerance_percentage(master_curve, compare_curve):
             difference = np.abs(compare_curve - master_curve) #absolute difference between the two curves
             tolerance = self.tolerance * master_curve #we can get the tolerance band with this
@@ -266,9 +249,9 @@ class Diode:
             percentage_within_tolerance = np.sum(within_tolerance) / len(within_tolerance) #now we just find the percentage of points that are "true" in the boolean array
             return percentage_within_tolerance
         p_ofTolerance = tolerance_percentage(self.newFitV, self.avgFitV)
-        self.bx.text(x=0.25, y=0.135, s= f"P_ofTolerance: {p_ofTolerance*100}", fontdict= None)
+        self.bx.text(x=0.25, y=0.135, s= f"P_ofTolerance: {p_ofTolerance*100}", fontdict= None) #this is hardcoded... the position needs to be dynamic with the x max and y max of the graph
         print(f"The percentage of the tested curve in the 5% band is: {100 * p_ofTolerance}")
-        if(p_ofTolerance >= 0.9): #if 95% of the curve is within tolerance, the diode should be fine 
+        if(p_ofTolerance >= 0.9): #if 90% of the curve is within tolerance, the diode should be fine 
             print(f"This diode is still operational")
         else:
             print(f"This diode is too worn out and not advised for operation")
@@ -279,7 +262,9 @@ diodeName = str(input("Name of Diode Being tested?: "))
 plot_max = str(input("Please specify the range of current (A) you want to plot (0.5 Amps will show all the sample data, 10 Amps and above will predict data up to that range): "))
 if(plot_max == ""):
     plot_max = 0.5
-diode = Diode(diodeName, plot_max)
+
+resistance = 10.1 #THE RESISTOR USED IN THE CIRCUIT (VERY CRUCIAL THAT THIS IS UPDATED IF YOU CHANGE THE CIRCUIT)
+diode = Diode(diodeName, plot_max, resistance)
 if 'new' in diodeName: #to add new data on a diode
     print("You are now entering the data for a new diode...")
     diode.CurveTrace()
@@ -288,6 +273,6 @@ if 'new' in diodeName: #to add new data on a diode
 
 diode.GraphNew(diodeName)
 diode.CurveTrace()
-diode.standardDev()
+diode.percentInBand()
 diode.save_graphs()
 

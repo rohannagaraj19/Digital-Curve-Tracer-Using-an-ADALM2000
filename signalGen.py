@@ -32,8 +32,8 @@ aout = adam.getAnalogOut()
 aout.enableChannel(0, True)
 t = np.linspace(0, duration, signal_sample_rate * duration)
 
-#v_signal = 1.5*t  #input signal equation
-v_signal = t
+v_signal = 4*np.sin(2*np.pi *t)  #input signal equation
+
 
 v_signal = np.clip(v_signal, 0, 5) #the adalm can only push a voltage of 5V... max current with amplifier is around 500 mA
 aout.setCyclic(False)
