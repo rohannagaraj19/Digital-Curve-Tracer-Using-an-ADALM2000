@@ -31,7 +31,7 @@ class Diode:
         self.currSample = 1000 #precision of plot (currSample amount of evenly spaced points)
         self.newSig = True #a signal to make sure standard dev doesnt run without a new graph
         self.resistance = resistance_      #what resistance is in series with the diode
-        self.tolerance = 0.5 #5 percent tolerance
+        self.tolerance = 0.05 #5 percent tolerance
 
     def save_graphs(self): #called at the end of the program... saves all the graphs and data in a folder
         name_ = self.name
